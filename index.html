@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel de Faturamento</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --surface2: #eeecea;
+    --border: rgba(0,0,0,0.09);
+    --text: #1a1a18;
+    --muted: #6b6a66;
+    --accent: #185FA5;
+    --green: #3B6D11;
+    --green-bg: #EAF3DE;
+    --red: #A32D2D;
+    --red-bg: #FCEBEB;
+    --amber: #854F0B;
+    --amber-bg: #FAEEDA;
+    --teal: #0F6E56;
+    --teal-light: #9FE1CB;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 2rem;
+  }
+
+  .page { max-width: 960px; margin: 0 auto; }
+
+  /* Header */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 2rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .header h1 { font-size: 22px; font-weight: 500; letter-spacing: -0.02em; }
+  .header p { font-size: 13px; color: var(--muted); margin-top: 3px; }
+  .date-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 6px 14px;
+    white-space: nowrap;
+  }
+
+  /* KPI Cards */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 1.5rem;
+  }
+  .card {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    transition: box-shadow .2s;
+  }
+  .card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.07); }
+  .card-label { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+  .card-value { font-size: 24px; font-weight: 500; letter-spacing: -0.02em; margin-bottom: 6px; }
+  .card-delta { font-size: 12px; display: flex; align-items: center; gap: 4px; }
+  .up { color: var(--green); }
+  .down { color: var(--red); }
+
+  /* Charts Row */
+  .charts-row {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap: 12px;
+    margin-bottom: 1.5rem;
+  }
+  .chart-box {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+  }
+  .box-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 14px;
+  }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 10px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .legend span { display: flex; align-items: center; gap: 5px; }
+  .leg-sq { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+  /* Table */
+  .table-box {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    margin-bottom: 1.5rem;
+    overflow-x: auto;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th {
+    color: var(--muted);
+    font-weight: 400;
+    text-align: left;
+    padding: 8px 0;
+    border-bottom: 0.5px solid var(--border);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  td { padding: 10px 0; border-bottom: 0.5px solid var(--border); color: var(--text); }
+  tr:last-child td { border-bottom: none; }
+  td:last-child, th:last-child { text-align: right; }
+  td:nth-child(4) { font-family: 'DM Mono', monospace; font-size: 12px; }
+
+  .pill {
+    display: inline-block;
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 99px;
+    font-weight: 500;
+  }
+  .pago { background: var(--green-bg); color: var(--green); }
+  .pendente { background: var(--amber-bg); color: var(--amber); }
+  .vencido { background: var(--red-bg); color: var(--red); }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
+    padding-top: 1rem;
+    border-top: 0.5px solid var(--border);
+  }
+
+  @media (max-width: 700px) {
+    body { padding: 1rem; }
+    .cards { grid-template-columns: repeat(2, 1fr); }
+    .charts-row { grid-template-columns: 1fr; }
+    .header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .card, .chart-box, .table-box { animation: fadeUp .4s ease both; }
+  .card:nth-child(1) { animation-delay: .05s; }
+  .card:nth-child(2) { animation-delay: .10s; }
+  .card:nth-child(3) { animation-delay: .15s; }
+  .card:nth-child(4) { animation-delay: .20s; }
+  .charts-row .chart-box:nth-child(1) { animation-delay: .25s; }
+  .charts-row .chart-box:nth-child(2) { animation-delay: .30s; }
+  .table-box { animation-delay: .35s; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <div>
+      <h1>Painel de faturamento</h1>
+      <p>Empresa de serviços — atualização diária</p>
+    </div>
+    <div class="date-badge" id="today"></div>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <p class="card-label">Faturamento do mês</p>
+      <p class="card-value">R$ 84.200</p>
+      <p class="card-delta up">▲ 12% vs mês anterior</p>
+    </div>
+    <div class="card">
+      <p class="card-label">Novos contratos</p>
+      <p class="card-value">14</p>
+      <p class="card-delta up">▲ 3 vs mês anterior</p>
+    </div>
+    <div class="card">
+      <p class="card-label">Ticket médio</p>
+      <p class="card-value">R$ 6.014</p>
+      <p class="card-delta down">▼ 2% vs mês anterior</p>
+    </div>
+    <div class="card">
+      <p class="card-label">Inadimplência</p>
+      <p class="card-value">R$ 7.400</p>
+      <p class="card-delta down">▲ 1,4% da base</p>
+    </div>
+  </div>
+
+  <div class="charts-row">
+    <div class="chart-box">
+      <p class="box-title">Faturamento mensal (R$)</p>
+      <div class="legend">
+        <span><span class="leg-sq" style="background:#185FA5;"></span>2025</span>
+        <span><span class="leg-sq" style="background:#9FE1CB; border:1px dashed #0F6E56;"></span>2024</span>
+      </div>
+      <div style="position:relative; height:200px;">
+        <canvas id="chartBar"></canvas>
+      </div>
+    </div>
+    <div class="chart-box">
+      <p class="box-title">Por tipo de serviço</p>
+      <div class="legend">
+        <span><span class="leg-sq" style="background:#185FA5;"></span>Consultoria 40%</span>
+        <span><span class="leg-sq" style="background:#1D9E75;"></span>Suporte 28%</span>
+        <span><span class="leg-sq" style="background:#BA7517;"></span>Implantação 20%</span>
+        <span><span class="leg-sq" style="background:#73726c;"></span>Outros 12%</span>
+      </div>
+      <div style="position:relative; height:200px;">
+        <canvas id="chartDoughnut"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-box">
+    <p class="box-title">Últimas transações</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Cliente</th>
+          <th>Serviço</th>
+          <th>Vencimento</th>
+          <th>Valor</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Grupo Ômega</td><td>Consultoria</td><td>10/04/2025</td><td>R$ 12.000</td><td><span class="pill pago">Pago</span></td></tr>
+        <tr><td>TechSul Ltda.</td><td>Suporte</td><td>15/04/2025</td><td>R$ 4.800</td><td><span class="pill pago">Pago</span></td></tr>
+        <tr><td>Nexus Corp.</td><td>Implantação</td><td>20/04/2025</td><td>R$ 18.500</td><td><span class="pill pendente">Pendente</span></td></tr>
+        <tr><td>Via Express</td><td>Suporte</td><td>05/04/2025</td><td>R$ 3.200</td><td><span class="pill vencido">Vencido</span></td></tr>
+        <tr><td>Construtora BM</td><td>Consultoria</td><td>25/04/2025</td><td>R$ 9.000</td><td><span class="pill pendente">Pendente</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="footer">
+    Gerado em <span id="footer-date"></span> · Dados fictícios — substitua pela sua base real
+  </div>
+
+</div>
+
+<script>
+  const now = new Date();
+  const fmt = { day: '2-digit', month: 'long', year: 'numeric' };
+  const dateStr = now.toLocaleDateString('pt-BR', fmt);
+  document.getElementById('today').textContent = dateStr;
+  document.getElementById('footer-date').textContent = dateStr;
+
+  new Chart(document.getElementById('chartBar').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'],
+      datasets: [
+        {
+          label: '2025',
+          data: [62000,71000,68000,84200,null,null,null,null,null,null,null,null],
+          backgroundColor: '#185FA5',
+          borderRadius: 4
+        },
+        {
+          label: '2024',
+          data: [55000,60000,72000,75000,80000,68000,74000,78000,69000,82000,88000,91000],
+          backgroundColor: '#9FE1CB',
+          borderRadius: 4,
+          borderWidth: 1,
+          borderColor: '#0F6E56'
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#888780' } },
+        y: {
+          grid: { color: 'rgba(136,135,128,0.12)' },
+          ticks: {
+            font: { size: 11 }, color: '#888780',
+            callback: v => 'R$' + (v/1000).toFixed(0) + 'k'
+          }
+        }
+      }
+    }
+  });
+
+  new Chart(document.getElementById('chartDoughnut').getContext('2d'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Consultoria','Suporte','Implantação','Outros'],
+      datasets: [{
+        data: [40,28,20,12],
+        backgroundColor: ['#185FA5','#1D9E75','#BA7517','#73726c'],
+        borderWidth: 3,
+        borderColor: '#ffffff',
+        hoverOffset: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '68%',
+      plugins: { legend: { display: false } }
+    }
+  });
+</script>
+</body>
+</html>
